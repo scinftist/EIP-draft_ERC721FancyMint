@@ -1,9 +1,9 @@
-**EIP Draft : new IERC721 implementation to eliminate minting fee ERC721FancyMin**
+**EIP Draft : new IERC721 implementation to eliminate minting fee ERC721FancyMint**
 
 **eip: eip-draft_ERC721FancyMint**\
 **title: ERC721FancyMint** \
 **author: scinftist.eth  (shypink@protonmail.com)**\
-**status: draft not submited**\
+**status: draft not submitted**\
 **type: ERC**\
 **created: 2022-11-3**\
 requires (*optional): <EIP 165 721 2309>
@@ -16,7 +16,7 @@ As of today there is 3 way to create a collection.
 
 1. Minting the tokens ahead so people can see it and find it trough market places. this includes minting fee for creators!
 
-2. create a contract and people mint the tokens.with first come first served strategy. <br> people cant see the Tokens before hand. and users don't know what they get.
+2. create a contract and people mint the tokens, with first come first served strategy. <br> people cant see the Tokens before hand. and users don't know what they get.
 
 3. using just in time minting or Lazy minting. that is only accessible trough one platform.<br> this limits the creators to one platform.
 
@@ -38,12 +38,12 @@ As of today there is 3 way to create a collection.
 
 # Specification
 1. `maxSupply` is desired number of token that we want to mint
-2. `preOwner` is the address that all tokens will be transfered to
+2. `preOwner` is the address that all tokens will be transferred to
 
 
 ## Interface
 
-* this interface is needed for Enumarable extension (`IERC721Enumarable`) of this contract.
+* this interface is needed for Enumerable extension (`IERC721Enumarable`) of this contract.
 
 ```
 // get the preOwner of a tokens
@@ -63,7 +63,7 @@ The `preOwnwer_` MUST NOT be 0x0 (i.e. zero address).
 
 proposed changes to 
 // OpenZeppelin Contracts (last updated v4.7.0) (token/ERC721/ERC721.sol)
-for full Implementaion see Reference Implementation.
+for full Implementation see Reference Implementation.
 ```
 //proposed changes
 
@@ -134,21 +134,21 @@ contract ERC721FancyMint is
 ```
 
 # Rationale
-since `EIP-2309` make the creation of aribtrary number of Tokens posible.
+since `EIP-2309` make the creation of arbitrary number of Tokens possible.
 
 this changes make this possible.
 
-since the defualt value of _balances mapping is uint 0.
+since the default value of `_balances` mapping is `0`.
 
 * At creation time we assigned `maxSupply` to `_balances[preOwner]`  from IERC721 interface point of view, preOwner has maxSupply number of tokens as it's balance.
 
-* this contract consider tokenIds range from `0` to `( maxSupply - 1 )`.
+* this contract consider `tokenIds` range from `0` to `( maxSupply - 1 )`.
 
 * to handle owners addresses, `_ownerOf(tokenId)` has been changed, If the `_owners[tokenId]` is the defualt value `0x0` (i.e address(0) )  & the `tokenId` is smaller than `maxSupply` it returns `preOwner`. else it returns the value that is stored in mapping.
 
 these changes wont affect the functionality of `IERC721`.
 
-* the interface is consist of two external functions, they are neccesary for Enumarable (`IERC721Enumarable`) extension of this standard.
+* the interface is consist of two external functions, they are necessary for Enumerable (`IERC721Enumerable`) extension of this standard.
 
 ```
 /**
@@ -171,22 +171,22 @@ these changes wont affect the functionality of `IERC721`.
 
  for values smaller than `maxSupply`, if `_owners[tokenId]` is not `0x0` address(0) the owner is the returned value.
 
- since there is no other function that uses `_ownerOf(tokenId)`, the behavior of the contract is the same as `ERC721` imolementaion of `ERC721` by OpenZeppelin Contracts (last updated v4.7.0) (token/ERC721/ERC721.sol)
+ since there is no other function that uses `_ownerOf(tokenId)`, the behavior of the contract is the same as `ERC721` implementation of `ERC721` by OpenZeppelin Contracts (last updated v4.7.0) (token/ERC721/ERC721.sol)
 
- these function that where omited
+ these function that where omitted
  1.  `_burn(uint256 tokenId)` 
  2. `_mint(address to, uint256 tokenId) `
  3. `_safeMint(address to, uint256 tokenId, bytes memory data)`
  4. `_safeMint(address to, uint256 tokenId)`
 
 
-# Backwards Compatibiltity
+# Backwards Compatibility
 
    this standard is fully compatible with all IERC721.
 
-* since this implemeentaion does not support any _burn function event Transfer() to 0x0 (i.e. address(0) ) will never accure.
+* since this implementation does not support any _burn function event Transfer() to 0x0 (i.e. address(0) ) will never happen.
 
-*  `Transfer()` event from account `from` address `0x0` (i.e. address(0) ) won't happen becuse there will be only 1 minting event that accures in `constructor()` and token creation emits via `ConsecutiveTransfer()` event
+*  `Transfer()` event from account `from` address `0x0` (i.e. address(0) ) won't happen because there will be only 1 minting event that happens in `constructor()` and token creation emits via `ConsecutiveTransfer()` event
 ```
 ConsecutiveTransfer(0, maxSupply_ - 1, address(0), preOwner_)
 ```
@@ -202,11 +202,11 @@ some of the tokens has been listed for sale for testing
 
 [Test case 1 on OpenSea with 5000 tokens](https://testnets.opensea.io/collection/fancy-first-try)
 
-some of the tokens has been listed for sale for testing but this test case includes 6000 token but opensea fails to show some tokens (`tokenId` 5000 to 5999), i think it's due to bad imlementaion of `EIP-2309`, I'm getting in touch with them, and i wish to hear about your toughts on this matter.
+some of the tokens has been listed for sale for testing but this test case includes 6000 token but opensea fails to show some tokens (`tokenId` 5000 to 5999), i think it's due to bad implementation of `EIP-2309`, I'm getting in touch with them, and I wish to hear about your thoughts on this matter.
 
 see [EIP-2309 examples](https://eips.ethereum.org/EIPS/eip-2309) 
 
-> "Batch token creation:<br> emit ConsecutiveTransfer(1, 100000, address(0), toAddress);"
+> "Batch token creation:<br> emit ConsecutiveTransfer(1, 100000, address(0), to Address);"
 
 [Test Case 2 on goerli testnet with 6000 tokens](https://goerli.etherscan.io/address/0x39095ebb95f3576f522a16fba4a21c2c109f4e98)
 
@@ -223,7 +223,7 @@ see [EIP-2309 examples](https://eips.ethereum.org/EIPS/eip-2309)
 
 This EIP standard can completely protect the rights of the owner, the owner can change the NFT user and use period at any time.
  
- but if some how user burns a token the owner tokne will be set to `0x0` (i.e. address(0) ) the token won't be destroyed and it will assigend to preOwner. I don't know if it occurs or not, since the `_burn()` function is removed and `_trandfer()` function has require that prevent transfer `_to` address(0) `0x0`. I wish to hear from you if you can asure me on this.
+ but if some how user burns a token, the owner of token will be set to `0x0` (i.e. address(0) ) the token won't be destroyed and it will assigned to preOwner. I don't know if it occurs or not, since the `_burn()` function is removed and `_trandfer()` function has require that prevent transfer `_to` address(0) `0x0`. I wish to hear from you if you can assure me on this.
 
  ```
  require(to != address(0), "ERC721: transfer to the zero address");
