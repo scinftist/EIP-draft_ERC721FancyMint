@@ -43,7 +43,7 @@ As of today there is 3 way to create a collection.
 
 ## Interface
 
-* this interface is needed for Enumerable extension (`IERC721Enumarable`) of this contract.
+* this interface is needed for Enumerable extension (`IERC721Enumerable`) of this contract.
 
 ```
 // get the preOwner of a tokens
