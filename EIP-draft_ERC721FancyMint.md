@@ -106,21 +106,20 @@ contract ERC721FancyMint is
         emit ConsecutiveTransfer(0, maxSupply_ - 1, address(0), preOwner_);
     }
 
-    function _ownerOf(uint256 tokenId) internal view virtual returns (address) {
-        address owner = _owners[tokenId];
-        if (owner == address(0) && (tokenId < _maxSupply)) {
-            return _preOwner;
-        }
-        return owner;
+    function ownerOf(uint256 tokenId) view return(address) {
+    if (tokenId < _maxSupply {
+      return _owners[tokenId] ? _owners[tokenId] : _preOwner;
     }
+  }
+
 
 
     //-----------------------
-    function maxSupply() external view returns (uint256) {
+    function maxSupply() public view returns (uint256) {
         return _maxSupply;
     }
 
-    function preOwner() external view returns (address) {
+    function preOwner() public view returns (address) {
         return _preOwner;
     }
 
