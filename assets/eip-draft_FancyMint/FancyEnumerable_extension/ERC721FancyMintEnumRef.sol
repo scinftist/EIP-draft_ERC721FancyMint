@@ -3,7 +3,7 @@
 
 pragma solidity ^0.8.0;
 
-import "../ERC721FancyMintRef.sol";
+import "../ERC721FancyMint.sol";
 
 // import "OpenZeppelin/openzeppelin-contracts@4.7.0/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 
@@ -19,7 +19,7 @@ import "OpenZeppelin/openzeppelin-contracts@4.7.0/contracts/token/ERC721/extensi
  * @dev this token does NOT support minting and burning
  */
 
-contract ERC721FancyMintEnum is ERC721FancyMint, IERC721Enumerable {
+abstract contract ERC721FancyMintEnum is ERC721FancyMint, IERC721Enumerable {
     // Mapping from owner to list of owned token IDs
     mapping(address => mapping(uint256 => uint256)) private _ownedTokens;
 
@@ -38,12 +38,12 @@ contract ERC721FancyMintEnum is ERC721FancyMint, IERC721Enumerable {
     // preOwner _tokenHandler tid -> index
     mapping(uint256 => uint256) private _preOwnerTokenHandler;
 
-    constructor(
-        string memory name_,
-        string memory symbol_,
-        uint256 maxSupply_,
-        address preOwner_
-    ) ERC721FancyMint(name_, symbol_, maxSupply_, preOwner_) {}
+    // constructor(
+    //     string memory name_,
+    //     string memory symbol_,
+    //     uint256 maxSupply_,
+    //     address preOwner_
+    // ) ERC721FancyMint(name_, symbol_, maxSupply_, preOwner_) {}
 
     /**
      * @dev See {IERC165-supportsInterface}.
@@ -172,7 +172,8 @@ contract ERC721FancyMintEnum is ERC721FancyMint, IERC721Enumerable {
 
         if (from == address(0)) {
             //does not support minting
-            revert("fromm == zero, does not support minting");
+            // revert("fromm == zero, does not support minting");
+            /// fix for single mint
         } else if (from != to) {
             if (from == _preOwner) {
                 _removeTokenFromPreOwner(tokenId);

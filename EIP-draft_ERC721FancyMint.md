@@ -9,7 +9,7 @@
 requires (*optional): <EIP 165 721 2309>
 
 # Abstract
-This standard proposes another implementation to `IERC721` Non-Fungible Tokens (NFTs) to eliminate minting fee of fixed length collection.
+This standard proposes another implementation to `IERC721` Non-Fungible Tokens (NFTs) to enable batch minting for fixed length collection at construction of the contract and regaining single `_mint()` capability after deployment while providing ERC721Enumerable extension.
 
 # Motivation
 As of today there is 3 way to create a collection.
@@ -24,7 +24,7 @@ As of today there is 3 way to create a collection.
 
 **benefits**:
 
-1. no minting fee, any number of token mint in constructor with `O(1)` execution.
+1.  any number of token mint in constructor with `O(1)` execution.
 
 2. user can view the tokens before purchasing.
 
@@ -32,9 +32,7 @@ As of today there is 3 way to create a collection.
 
 **caveat**
 
-1. any number of tokens should be minted at deployment time, an there is no further `_mint()` or `_safeMint()` function available.
-
-2. this token does not support `_burn()` function.
+* this token does not support `_burn()` function.
 
 # Specification
 1. `maxSupply` is desired number of token that we want to mint
@@ -47,17 +45,16 @@ As of today there is 3 way to create a collection.
 
 ```
 // get the preOwner of a tokens
-function preOwner() external view returns(address);
+function preOwner() public view returns(address);
 
 
 // get the maxSupply of a token
-function maxSupply() external view returns(uint256);
+function maxSupply() public view returns(uint256);
 
 ```
 
-The `maxSupply_` MUST NOT be 0.
 The `preOwnwer_` MUST NOT be 0x0 (i.e. zero address).
-
+The `preOwner_` MUST NOT change.
 
 ## Implementation
 
@@ -80,7 +77,7 @@ contract ERC721FancyMint is
     //max
     uint256 private _maxSupply;
     //NFT owner
-    address private _preOwner;
+    address private immutable _preOwner;
 
     
     constructor(
@@ -106,11 +103,48 @@ contract ERC721FancyMint is
         emit ConsecutiveTransfer(0, maxSupply_ - 1, address(0), preOwner_);
     }
 
-    function ownerOf(uint256 tokenId) view return(address) {
-    if (tokenId < _maxSupply {
-      return _owners[tokenId] ? _owners[tokenId] : _preOwner;
+    /**@dev my proposal
+     * i
+     *for values greater equal than maxSupply, ownerOf(tokenId) will alweys return zero address 0x0 i.e address(0).
+     * therefor token _exist() is false for these values.
+     * for values smaller than maxSupply, if _owners[tokenId] is not address 0 the owner is the returned value.
+     *If the _owners[tokenId] is the defualt value 0x0 (i.e address(0) )  & the tokenId is smaller than maxSupply it returns preOwner.
+     */
+    function _ownerOf(uint256 tokenId) internal view virtual returns (address) {
+        address owner = _owners[tokenId];
+        if (owner == address(0) && (tokenId < _maxSupply)) {
+            return _preOwner;
+        }
+        return owner;
     }
-  }
+
+\\**@dev update _maxSupply in minting
+*
+*/
+function _mint(address to, uint256 tokenId) internal virtual {
+        require(to != address(0), "ERC721: mint to the zero address");
+        require(!_exists(tokenId), "ERC721: token already minted");
+
+        _beforeTokenTransfer(address(0), to, tokenId);
+
+        // Check that tokenId was not minted by `_beforeTokenTransfer` hook
+        require(!_exists(tokenId), "ERC721: token already minted");
+
+        unchecked {
+            // Will not overflow unless all 2**256 token ids are minted to the same owner.
+            // Given that tokens are minted one by one, it is impossible in practice that
+            // this ever happens. Might change if we allow batch minting.
+            // The ERC fails to describe this case.
+            _balances[to] += 1;
+            _maxSupply += 1;
+        }
+
+        _owners[tokenId] = to;
+
+        emit Transfer(address(0), to, tokenId);
+
+        _afterTokenTransfer(address(0), to, tokenId);
+    }
 
 
 
@@ -123,7 +157,7 @@ contract ERC721FancyMint is
         return _preOwner;
     }
 
-// and _mint() _safeMint() _burn() are removed from openZeppelin ERC721 Implementation V4.7.0
+ \\\ _burn() is removed from openZeppelin ERC721 Implementation V4.7.0
 
 
 
@@ -172,11 +206,9 @@ these changes wont affect the functionality of `IERC721`.
 
  since there is no other function that uses `_ownerOf(tokenId)`, the behavior of the contract is the same as `ERC721` implementation of `ERC721` by OpenZeppelin Contracts (last updated v4.7.0) (token/ERC721/ERC721.sol)
 
- these function that where omitted
- 1.  `_burn(uint256 tokenId)` 
- 2. `_mint(address to, uint256 tokenId) `
- 3. `_safeMint(address to, uint256 tokenId, bytes memory data)`
- 4. `_safeMint(address to, uint256 tokenId)`
+ this function that where omitted from ERC721.sol openZeppelin v4.7.0
+ *  `_burn(uint256 tokenId)` 
+
 
 
 # Backwards Compatibility
@@ -185,31 +217,22 @@ these changes wont affect the functionality of `IERC721`.
 
 * since this implementation does not support any _burn function event Transfer() to 0x0 (i.e. address(0) ) will never happen.
 
-*  `Transfer()` event from account `from` address `0x0` (i.e. address(0) ) won't happen because there will be only 1 minting event that happens in `constructor()` and token creation emits via `ConsecutiveTransfer()` event
+*  `Transfer()` event from account `from` address `0x0` (i.e. address(0) ) won't happen in batch minting there will be only 1 minting event that happens in `constructor()` and token creation emits via `ConsecutiveTransfer()` event, and after that token creation handles via
 ```
 ConsecutiveTransfer(0, maxSupply_ - 1, address(0), preOwner_)
 ```
 
 # Test Cases
 
+this test case was created before: adding _mint() for single mint functionality
  Test cases were Implemented in PR:
- [../assets/eip-draft_ERC721FancyMint/testCase.sol](https://github.com/shypink/EIP-draft_ERC721FancyMint/tree/master/assets/eip-draft_FancyMint/testCase.sol)
+ [Fancy Project : Premeium](https://opensea.io/collection/fancy-project-premeium)
 
+and 
+
+[minting 2**256 -1 ERC721 with IERC721Enumarable capability](https://ethereum-magicians.org/t/proof-of-concept-minting-2-256-1-erc721-with-ierc721enumarable-capability/12467)
 some of the tokens has been listed for sale for testing
 
-[Test Case 1 on goerli testnet with 5000 tokens](https://goerli.etherscan.io/address/0xae3a99bd429238a6d2a48749a1e007c1fcf39053)
-
-[Test case 1 on OpenSea with 5000 tokens](https://testnets.opensea.io/collection/fancy-first-try)
-
-some of the tokens has been listed for sale for testing but this test case includes 6000 token but opensea fails to show some tokens (`tokenId` 5000 to 5999), i think it's due to bad implementation of `EIP-2309`, I'm getting in touch with them, and I wish to hear about your thoughts on this matter.
-
-see [EIP-2309 examples](https://eips.ethereum.org/EIPS/eip-2309) 
-
-> "Batch token creation:<br> emit ConsecutiveTransfer(1, 100000, address(0), to Address);"
-
-[Test Case 2 on goerli testnet with 6000 tokens](https://goerli.etherscan.io/address/0x39095ebb95f3576f522a16fba4a21c2c109f4e98)
-
-[Test case 2 on OpenSea with 6000 tokens](https://testnets.opensea.io/collection/fancy-second-try)
 
 
 # Reference Implementation
@@ -218,6 +241,8 @@ see [EIP-2309 examples](https://eips.ethereum.org/EIPS/eip-2309)
  Test cases where Implemented in PR:
  [../assets/eip-draft_ERC721FancyMint/ERC721FancyMint.sol](https://github.com/shypink/EIP-draft_ERC721FancyMint/tree/master/assets/eip-draft_FancyMint/ERC721FancyMint.sol)
 
+## extension 
+[ERC721FancyMintEnumarable](https://github.com/shypink/EIP-draft_ERC721FancyMint/tree/master/assets/eip-draft_FancyMint/FancyEnumerable_extension)
 # Security Considerations
 
 This EIP standard can completely protect the rights of the owner, the owner can change the NFT user and use period at any time.

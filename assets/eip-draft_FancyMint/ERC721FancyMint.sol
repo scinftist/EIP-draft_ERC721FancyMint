@@ -3,13 +3,22 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts@4.7.0/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts@4.7.0/token/ERC721/IERC721Receiver.sol";
-import "@openzeppelin/contracts@4.7.0/token/ERC721/extensions/IERC721Metadata.sol";
-import "@openzeppelin/contracts@4.7.0/utils/Address.sol";
-import "@openzeppelin/contracts@4.7.0/utils/Context.sol";
-import "@openzeppelin/contracts@4.7.0/utils/Strings.sol";
-import "@openzeppelin/contracts@4.7.0/utils/introspection/ERC165.sol";
+// import "@openzeppelin/contracts@4.7.0/token/ERC721/IERC721.sol";
+// import "@openzeppelin/contracts@4.7.0/token/ERC721/IERC721Receiver.sol";
+// import "@openzeppelin/contracts@4.7.0/token/ERC721/extensions/IERC721Metadata.sol";
+// import "@openzeppelin/contracts@4.7.0/utils/Address.sol";
+// import "@openzeppelin/contracts@4.7.0/utils/Context.sol";
+// import "@openzeppelin/contracts@4.7.0/utils/Strings.sol";
+// import "@openzeppelin/contracts@4.7.0/utils/introspection/ERC165.sol";
+
+import "OpenZeppelin/openzeppelin-contracts@4.7.0/contracts/token/ERC721/IERC721.sol";
+import "OpenZeppelin/openzeppelin-contracts@4.7.0/contracts/token/ERC721/IERC721Receiver.sol";
+import "OpenZeppelin/openzeppelin-contracts@4.7.0/contracts/token/ERC721/extensions/IERC721Metadata.sol";
+import "OpenZeppelin/openzeppelin-contracts@4.7.0/contracts/utils/Address.sol";
+import "OpenZeppelin/openzeppelin-contracts@4.7.0/contracts/utils/Context.sol";
+import "OpenZeppelin/openzeppelin-contracts@4.7.0/contracts/utils/Strings.sol";
+import "OpenZeppelin/openzeppelin-contracts@4.7.0/contracts/utils/introspection/ERC165.sol";
+
 import "./IERC2309.sol";
 
 /**
@@ -34,7 +43,7 @@ contract ERC721FancyMint is
     //maxSupply
     uint256 private _maxSupply;
     //NFT owner
-    address private _preOwner;
+    address private immutable _preOwner;
 
     // Token name
     string private _name;
@@ -56,6 +65,7 @@ contract ERC721FancyMint is
 
     /**
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
+     * Initializes the contract by setting 'preOwner' and 'maxSupply' to token collection.
      */
     constructor(
         string memory name_,
@@ -72,17 +82,21 @@ contract ERC721FancyMint is
         _preOwner = preOwner_;
         // blance of preOwner
         _balances[_preOwner] = _maxSupply;
-        // emitiing token creation: read EIP-2309
-        emit ConsecutiveTransfer(0, _maxSupply - 1, address(0), preOwner_);
+        // emitiing token creation: read EIP-2309 -
+        //marketplaces have not implemnted EIP-2309 fully as of today
+        //so the event should be less than 5000
+        //aslo child contract this event is available temperoraly
+        emit ConsecutiveTransfer(0, _maxSupply - 1, address(0), _preOwner);
     }
+
     /**
-    *@dev my proposal
-    */
-    function maxSupply() external view returns (uint256) {
+     *@dev my proposal
+     */
+    function maxSupply() public view returns (uint256) {
         return _maxSupply;
     }
 
-    function preOwner() external view returns (address) {
+    function preOwner() public view returns (address) {
         return _preOwner;
     }
 
@@ -101,7 +115,6 @@ contract ERC721FancyMint is
             interfaceId == type(IERC721Metadata).interfaceId ||
             super.supportsInterface(interfaceId);
     }
-
 
     /**
      * @dev See {IERC721-balanceOf}.
@@ -314,7 +327,7 @@ contract ERC721FancyMint is
      * i
      *for values greater equal than maxSupply, ownerOf(tokenId) will alweys return zero address 0x0 i.e address(0). therefor token _exist() is false for these values.
      * for values smaller than maxSupply, if _owners[tokenId] is not address 0 the owner is the returned value.
-     *If the _owners[tokenId] is the defualt value 0x0 (i.e address(0) )  & the tokenId is smaller than maxSupply it returns preOwner. 
+     *If the _owners[tokenId] is the defualt value 0x0 (i.e address(0) )  & the tokenId is smaller than maxSupply it returns preOwner.
      */
     function _ownerOf(uint256 tokenId) internal view virtual returns (address) {
         address owner = _owners[tokenId];
@@ -356,8 +369,74 @@ contract ERC721FancyMint is
     }
 
     /**
-    *@dev _mint() _safeMint() _burn() functions has been removed from openZepelin implementation.
-    */
+     *@dev _mint() _safeMint() _burn() functions has been removed from openZepelin implementation.
+     */
+    /**
+     * @dev Safely mints `tokenId` and transfers it to `to`.
+     *
+     * Requirements:
+     *
+     * - `tokenId` must not exist.
+     * - If `to` refers to a smart contract, it must implement {IERC721Receiver-onERC721Received}, which is called upon a safe transfer.
+     *
+     * Emits a {Transfer} event.
+     */
+    function _safeMint(address to, uint256 tokenId) internal virtual {
+        _safeMint(to, tokenId, "");
+    }
+
+    /**
+     * @dev Same as {xref-ERC721-_safeMint-address-uint256-}[`_safeMint`], with an additional `data` parameter which is
+     * forwarded in {IERC721Receiver-onERC721Received} to contract recipients.
+     */
+    function _safeMint(
+        address to,
+        uint256 tokenId,
+        bytes memory data
+    ) internal virtual {
+        _mint(to, tokenId);
+        require(
+            _checkOnERC721Received(address(0), to, tokenId, data),
+            "ERC721: transfer to non ERC721Receiver implementer"
+        );
+    }
+
+    /**
+     * @dev Mints `tokenId` and transfers it to `to`.
+     *
+     * WARNING: Usage of this method is discouraged, use {_safeMint} whenever possible
+     *
+     * Requirements:
+     *
+     * - `tokenId` must not exist.
+     * - `to` cannot be the zero address.
+     *
+     * Emits a {Transfer} event.
+     */
+    function _mint(address to, uint256 tokenId) internal virtual {
+        require(to != address(0), "ERC721: mint to the zero address");
+        require(!_exists(tokenId), "ERC721: token already minted");
+
+        _beforeTokenTransfer(address(0), to, tokenId);
+
+        // Check that tokenId was not minted by `_beforeTokenTransfer` hook
+        require(!_exists(tokenId), "ERC721: token already minted");
+
+        unchecked {
+            // Will not overflow unless all 2**256 token ids are minted to the same owner.
+            // Given that tokens are minted one by one, it is impossible in practice that
+            // this ever happens. Might change if we allow batch minting.
+            // The ERC fails to describe this case.
+            _balances[to] += 1;
+            _maxSupply += 1;
+        }
+
+        _owners[tokenId] = to;
+
+        emit Transfer(address(0), to, tokenId);
+
+        _afterTokenTransfer(address(0), to, tokenId);
+    }
 
     /**
      * @dev Transfers `tokenId` from `from` to `to`.
